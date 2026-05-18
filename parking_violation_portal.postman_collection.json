@@ -1,0 +1,835 @@
+{
+  "info": {
+    "name": "Parking Violation Portal — QA Tests",
+    "description": "QA regression tests for Parking Violation Portal. Run in order. Uses collection variables for tokens and IDs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "BASE_URL", "value": "http://localhost:8090" },
+    { "key": "OFFICER_TOKEN", "value": "" },
+    { "key": "MEMBER1_TOKEN", "value": "" },
+    { "key": "MEMBER2_TOKEN", "value": "" },
+    { "key": "MEMBER5_TOKEN", "value": "" },
+    { "key": "VIOLATION_ID", "value": "" },
+    { "key": "INVOICE_ID", "value": "" },
+    { "key": "NIGHT_VIOLATION_ID", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Health Check (public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body contains ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{BASE_URL}}/health"
+          }
+        },
+        {
+          "name": "Login — Officer 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Token returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.token).to.be.a('string');",
+                  "  pm.collectionVariables.set('OFFICER_TOKEN', json.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{BASE_URL}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"officer1@portal.test\", \"password\": \"password\"}"
+            }
+          }
+        },
+        {
+          "name": "Login — Member 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Token returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.token).to.be.a('string');",
+                  "  pm.collectionVariables.set('MEMBER1_TOKEN', json.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{BASE_URL}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"member1@portal.test\", \"password\": \"password\"}"
+            }
+          }
+        },
+        {
+          "name": "Login — Member 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Token returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('MEMBER2_TOKEN', json.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{BASE_URL}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"member2@portal.test\", \"password\": \"password\"}"
+            }
+          }
+        },
+        {
+          "name": "Login — Member 5",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Token returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('MEMBER5_TOKEN', json.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{BASE_URL}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"member5@portal.test\", \"password\": \"password\"}"
+            }
+          }
+        },
+        {
+          "name": "Login — Wrong Password (expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{BASE_URL}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"officer1@portal.test\", \"password\": \"wrongpassword\"}"
+            }
+          }
+        },
+        {
+          "name": "No Token — Protected Endpoint (expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{BASE_URL}}/violations"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authorization Matrix",
+      "item": [
+        {
+          "name": "Member cannot GET /violations (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Member blocked from officer endpoint', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" }],
+            "url": "{{BASE_URL}}/violations"
+          }
+        },
+        {
+          "name": "Member cannot POST /rule-versions (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Member blocked from publishing rules', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/rule-versions",
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Member cannot GET /audit/events (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Member blocked from audit log', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" }],
+            "url": "{{BASE_URL}}/audit/events"
+          }
+        },
+        {
+          "name": "Officer cannot GET /invoices (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Officer blocked from member invoices', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" }],
+            "url": "{{BASE_URL}}/invoices"
+          }
+        },
+        {
+          "name": "Officer cannot GET /transactions (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Officer blocked from transactions', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" }],
+            "url": "{{BASE_URL}}/transactions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Fine Calculation — Time Multiplier",
+      "item": [
+        {
+          "name": "DAY: expired_meter 10:00 Jakarta → fine = 50000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Fine = 50000 (day multiplier 1.0)', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.final_amount).to.eql(50000);",
+                  "  pm.collectionVariables.set('VIOLATION_ID', json.id);",
+                  "});",
+                  "pm.test('fine_breakdown has correct time_multiplier 1.0', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.fine_breakdown.time_multiplier).to.eql(1.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 1234 ABC\",\n  \"violation_type\": \"expired_meter\",\n  \"location\": \"Jl. Test Siang\",\n  \"occurred_at\": \"2026-06-01T03:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "NIGHT: expired_meter 23:00 Jakarta → fine = 75000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Fine = 75000 (night multiplier 1.5)', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.final_amount).to.eql(75000);",
+                  "  pm.collectionVariables.set('NIGHT_VIOLATION_ID', json.id);",
+                  "});",
+                  "pm.test('fine_breakdown has correct time_multiplier 1.5', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.fine_breakdown.time_multiplier).to.eql(1.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 2345 BCD\",\n  \"violation_type\": \"expired_meter\",\n  \"location\": \"Jl. Test Malam\",\n  \"occurred_at\": \"2026-06-01T16:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "NIGHT: no_parking_zone 03:00 Jakarta → fine = 225000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Fine = 225000 (150000 × 1.5)', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.final_amount).to.eql(225000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 3456 CDE\",\n  \"violation_type\": \"no_parking_zone\",\n  \"location\": \"Jl. Test Malam\",\n  \"occurred_at\": \"2026-06-01T20:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "NIGHT: disabled_spot 22:30 Jakarta → fine = 750000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Fine = 750000 (500000 × 1.5)', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.final_amount).to.eql(750000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 4567 DEF\",\n  \"violation_type\": \"disabled_spot\",\n  \"location\": \"Jl. Test Malam\",\n  \"occurred_at\": \"2026-06-01T15:30:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Fine Calculation — Repeat Multiplier",
+      "item": [
+        {
+          "name": "1st violation B 5678 EFG (0 prior unpaid) → fine = 50000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Fine = 50000 (repeat x1.0)', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.final_amount).to.eql(50000);",
+                  "  pm.expect(json.fine_breakdown.repeat_multiplier).to.eql(1.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 5678 EFG\",\n  \"violation_type\": \"expired_meter\",\n  \"location\": \"Jl. Repeat Test 1\",\n  \"occurred_at\": \"2026-06-01T03:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2nd violation B 5678 EFG (1 prior unpaid) → fine = 75000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Fine = 75000 (repeat x1.5)', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.final_amount).to.eql(75000);",
+                  "  pm.expect(json.fine_breakdown.repeat_multiplier).to.eql(1.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 5678 EFG\",\n  \"violation_type\": \"expired_meter\",\n  \"location\": \"Jl. Repeat Test 2\",\n  \"occurred_at\": \"2026-06-02T03:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "3rd violation B 5678 EFG (2+ prior unpaid) → fine = 100000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Fine = 100000 (repeat x2.0)', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.final_amount).to.eql(100000);",
+                  "  pm.expect(json.fine_breakdown.repeat_multiplier).to.eql(2.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 5678 EFG\",\n  \"violation_type\": \"expired_meter\",\n  \"location\": \"Jl. Repeat Test 3\",\n  \"occurred_at\": \"2026-06-03T03:00:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Payment",
+      "item": [
+        {
+          "name": "Member 1 — Get Invoices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Save first pending invoice ID', () => {",
+                  "  const invoices = pm.response.json();",
+                  "  const pending = invoices.find(i => i.status === 'pending');",
+                  "  if (pending) pm.collectionVariables.set('INVOICE_ID', pending.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" }],
+            "url": "{{BASE_URL}}/invoices"
+          }
+        },
+        {
+          "name": "Pay Invoice — Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Invoice status is paid', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('paid');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/invoices/{{INVOICE_ID}}/pay",
+            "body": { "mode": "raw", "raw": "{\"scenario\": \"success\"}" }
+          }
+        },
+        {
+          "name": "Pay Already-Paid Invoice (expect 409) — CRITICAL-04",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🔴 CRITICAL-04: Returns 409 Conflict for already-paid invoice', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/invoices/{{INVOICE_ID}}/pay",
+            "body": { "mode": "raw", "raw": "{\"scenario\": \"success\"}" }
+          }
+        },
+        {
+          "name": "Failed Payment Can Be Retried",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 — retry allowed after failure', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/invoices/{{INVOICE_ID}}/pay",
+            "body": { "mode": "raw", "raw": "{\"scenario\": \"success\"}" }
+          }
+        },
+        {
+          "name": "Member 2 cannot pay Member 1 invoice (expect 403) — CRITICAL-03",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🔴 CRITICAL-03: Cross-member payment blocked (403)', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{MEMBER2_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/invoices/{{INVOICE_ID}}/pay",
+            "body": { "mode": "raw", "raw": "{\"scenario\": \"success\"}" }
+          }
+        },
+        {
+          "name": "Member 2 cannot view Member 1 invoice (expect 403) — CRITICAL-03",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🔴 CRITICAL-03: Cross-member invoice view blocked (403)', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{MEMBER2_TOKEN}}" }],
+            "url": "{{BASE_URL}}/invoices/{{INVOICE_ID}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Rule Version Isolation",
+      "item": [
+        {
+          "name": "Submit violation before new rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Save violation ID and original amount', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('RULE_TEST_VID', json.id);",
+                  "  pm.collectionVariables.set('RULE_TEST_AMOUNT', json.final_amount);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate_number\": \"B 1234 ABC\",\n  \"violation_type\": \"blocking_hydrant\",\n  \"location\": \"Jl. Rule Isolation Test\",\n  \"occurred_at\": \"2026-07-01T03:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Publish New Rule Version (v2 with higher amounts)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 — new rule version published', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{BASE_URL}}/rule-versions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"base_amounts\": {\n    \"expired_meter\": 999999,\n    \"no_parking_zone\": 999999,\n    \"blocking_hydrant\": 999999,\n    \"disabled_spot\": 999999\n  },\n  \"time_multipliers\": { \"day\": 1.0, \"night\": 1.5 },\n  \"repeat_multipliers\": { \"none\": 1.0, \"one\": 1.5, \"two_or_more\": 2.0 },\n  \"effective_from\": \"2026-07-02T00:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Re-fetch old violation — amount must be unchanged — CRITICAL-05",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('🔴 CRITICAL-05: Past violation amount not changed by new rule', () => {",
+                  "  const json = pm.response.json();",
+                  "  const originalAmount = pm.collectionVariables.get('RULE_TEST_AMOUNT');",
+                  "  pm.expect(String(json.final_amount)).to.eql(String(originalAmount));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" }],
+            "url": "{{BASE_URL}}/violations/{{RULE_TEST_VID}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Transaction History",
+      "item": [
+        {
+          "name": "Member 1 — Get Transactions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('Each entry has fine_breakdown and rule_version', () => {",
+                  "  const txs = pm.response.json();",
+                  "  if (txs.length > 0) {",
+                  "    pm.expect(txs[0]).to.have.property('fine_breakdown');",
+                  "    pm.expect(txs[0]).to.have.property('rule_version');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{MEMBER1_TOKEN}}" }],
+            "url": "{{BASE_URL}}/transactions"
+          }
+        },
+        {
+          "name": "Officer cannot GET /transactions (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Officer blocked from transactions', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" }],
+            "url": "{{BASE_URL}}/transactions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Audit Trail",
+      "item": [
+        {
+          "name": "Officer — Get Audit Events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('violation.created event exists', () => {",
+                  "  const body = pm.response.text();",
+                  "  pm.expect(body).to.include('violation.created');",
+                  "});",
+                  "pm.test('rule_version.published event exists', () => {",
+                  "  const body = pm.response.text();",
+                  "  pm.expect(body).to.include('rule_version.published');",
+                  "});",
+                  "pm.test('payment.attempted event exists', () => {",
+                  "  const body = pm.response.text();",
+                  "  pm.expect(body).to.include('payment.attempted');",
+                  "});",
+                  "pm.test('invoice.paid event exists', () => {",
+                  "  const body = pm.response.text();",
+                  "  pm.expect(body).to.include('invoice.paid');",
+                  "});",
+                  "pm.test('payment.failed event exists', () => {",
+                  "  const body = pm.response.text();",
+                  "  pm.expect(body).to.include('payment.failed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{OFFICER_TOKEN}}" }],
+            "url": "{{BASE_URL}}/audit/events"
+          }
+        }
+      ]
+    }
+  ]
+}
